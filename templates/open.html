@@ -1,0 +1,17 @@
+{% extends 'basic.html' %}
+{% block btnopen %}btn-success{% endblock btnopen %}
+{% block table %}{% for entry in entries %}
+{% if entry.status == False %}
+<tr onclick="window.location='{% url 'entry' entry.id%}'" class="point">
+  <th scope="row">{{entry.id}}</th>
+  <td>{{entry.name}}</td>
+  <td>{{entry.father}}</td>
+  <td><a href="tel:{{entry.contact_one}}">{{entry.contact_one}}</a></td>
+  <td>{{entry.borrow_date}}</td>
+  <td>₹{{entry.principal}}</td>
+  <td>{{entry.guarantor}}</td>
+  <td style="max-width: 200px">{{entry.address}}</td>
+</tr>
+{% endif %}
+
+{% endfor %} {% endblock table %}

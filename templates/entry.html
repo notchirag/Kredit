@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Entry - {{entry.id}}</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9"
+      crossorigin="anonymous"
+    />
+
+    <style>
+      .details {
+        font-size: 20px;
+      }
+
+      a {
+        text-decoration: none;
+      }
+
+      @media print {
+        * {
+          color: #000000 !important;
+          overflow: hidden;
+        }
+    
+      }
+
+    </style>
+  </head>
+  <body data-bs-theme="dark">
+    {% for message in messages %}
+    <div
+      class="alert alert-{{message.tags}} alert-dismissible fade show text-center"
+      role="alert"
+    >
+      {{message}}<button
+        type="button"
+        class="btn-close"
+        data-bs-dismiss="alert"
+        aria-label="Close"
+      ></button>
+    </div>
+    {% endfor %}
+    <div class="container my-5">
+      <div class="card">
+        <div
+          class="card-header head text-center d-flex justify-content-between align-items-center"
+        >
+          <div>
+            <button
+              class="btn btn-secondary"
+              type="button"
+              onclick="javascript:history.back()"
+            >
+              Back
+            </button>
+          </div>
+          <div>
+            <h1>{{entry.name}}</h1>
+            <h5>ID - {{entry.id}}</h5>
+            
+            <h5>{% if days > 0 %}Due in {{days}} days {% elif days == 0 %}Due Today {% else %} {{days|stringformat:"d"|slice:"1:"}} days Overdue {% endif %}</h5>
+            
+          </div>
+          <div>
+            {% if perms.main.delete_entries %}
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+              Delete Entry
+            </button>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card-body details">
+          <div class="d-flex justify-content-around">
+            <table class="table table-borderless w-50">
+              <tbody>
+                <tr>
+                  <th scope="row">Name</th>
+                  <td>{{entry.name}}</td>
+                </tr>
+
+                <tr>
+                  <th scope="row">Father</th>
+                  <td>{{entry.father }}</td>
+                </tr>
+                
+                <tr>
+                  <th scope="row">Borrow</th>
+                  <td>{{entry.borrow_date }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Due</th>
+                  <td>{{entry.due_date }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Contacts</th>
+                  <td>
+                    <a href="tel:{{entry.contact_one}}"
+                      >{{entry.contact_one}}</a
+                    >
+                    {% if entry.contact_two %} |
+                    <a href="tel:{{entry.contact_two}}"
+                      >{{entry.contact_two}}</a
+                    >
+                    {% endif %}
+                  </td>
+                </tr>
+                
+                <tr>
+                  <th scope="row">Principal</th>
+                  <td>₹{{entry.principal }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Interest Rate</th>
+                  <td>{{entry.interest }}%</td>
+                </tr>
+                <tr>
+                  <th scope="row">Address</th>
+                  <td class="w-50">{{entry.address }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Guarantor</th>
+                  <td>{{entry.guarantor }} [<a href="tel:{{entry.contact_guar}}"
+                    >{{entry.contact_guar}}</a
+                  >]</td>
+                </tr>
+                <tr>
+                  <th scope="row">Entry Time</th>
+                  <td>{{entry.entry_time }}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Status</th>
+                  {% if entry.status == False %}
+                  <td>Open</td>
+                  {% else %}
+                  <td>Closed</td>
+                  {% endif %}
+                </tr>
+              </tbody>
+            </table>
+            {% if perms.main.view_entries %}
+            <div class="d-flex flex-column align-item-center justify-content-center text-center w-25">
+                <h2>Actions</h2>
+                <a href="{{ entry.identity.url }}" target="_blank" class="btn btn-primary my-2"
+                  >Download Data</a
+                >
+
+                <button
+                type="button"
+                class="btn btn-info my-2"
+                data-bs-toggle="modal"
+                data-bs-target="#duedate"
+                >
+                  Change Due Date
+                </button>
+
+                <button
+                type="button"
+                class="btn btn-info my-2"
+                data-bs-toggle="modal"
+                data-bs-target="#update"
+                >
+                  Update Details
+                </button>
+
+                {% endif %}
+
+                <a href="{% url 'status_entry' entry.id %}"
+                  class="btn btn-warning my-2">
+                  {% if entry.status %}
+                  Reopen Entry
+                  {%else%}
+                  Close Entry
+                  {%endif%}
+                </a>
+
+                {% if perms.main.add_entries and entry.status == False %}
+                <button
+                type="button"
+                class="btn btn-success my-2"
+                data-bs-toggle="modal"
+                data-bs-target="#inst"
+                >
+                  Add Installment
+                </button>
+                {%endif%}
+                <hr>
+                <h2>Calculate Interest</h2>
+                <input type="number" id="duration" placeholder="Duration (months)" class="form-control text-center"/> 
+                <div class="d-flex align-item-center justify-content-center text-center">
+                  <button
+                  class="btn btn-primary my-2 me-1 w-50"
+                  onclick="showModal('Simple Interest for {{entry.name}}', 'si');"
+                  >
+                    Simple
+                  </button>
+                   <button
+                  class="btn btn-primary my-2 ms-1 w-50"
+                  onclick="showModal('Compound Interest for {{entry.name}}', 'ci');"
+                  >
+                    Compound
+                  </button>
+              </div>
+              </div>
+          </div>
+
+          <div class="mt-5">
+            {% if insts %}
+            <hr>
+            <center><h2>INSTALLMENTS</h2></center>
+            <hr>
+            <div class="table-responsive">
+            <table class="table">
+              <thead class="table-dark">
+                <tr>
+
+                  <th scope="col">Name</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Payment Type</th>
+                  <th scope="col">Delete</th>
+        
+                </tr>
+              </thead>
+              <tbody>
+                {% for inst in insts %}
+                <tr>
+                  <td>{{inst.name}}</td>
+                  <td>₹{{inst.amount}}</td>
+                  <td>{{inst.date}}</td>
+                  <td>
+                    {% if inst.pay_type == "CA" %}Cash 
+                    {% elif inst.pay_type == "UP" %}UPI
+                    {% elif inst.pay_type == "BT" %}Bank Transfer
+                    {% elif inst.pay_type == "PH" %}Phone Pay
+                    {% elif inst.pay_type == "PA" %}Paytm
+                    {% elif inst.pay_type == "GP" %}Google Pay
+                    {% endif %}
+                    {% if perms.main.delete_entries %}
+                  </td>
+                  <td><a href="{% url 'delete_inst' inst.id %}" class="btn btn-danger"
+                    >Delete</a
+                  ></td>
+            {% endif %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% endif %} 
+          </div>
+        </div>
+      </div>
+
+  
+    </div>
+
+
+<!-- Modal -->
+
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="deleteModalLabel">Delete Entry {{entry.id}}</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            Are you sure you want to delete entry for <b> {{entry.name}} ({{entry.id}})</b> ?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <a href="{% url 'delete_entry' entry.id %}" class="btn btn-danger"
+              >Yes</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+
+
+
+
+    
+    <!-- Modal -->
+    <div
+      class="modal fade"
+      id="inst"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+      tabindex="-1"
+      aria-labelledby="instLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="instLabel">
+              Add Installment for {{entry.name}}
+            </h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %} {{form}}
+              <div class="modal-footer mt-2">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Close
+                </button>
+                <button type="submit" class="btn btn-primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div
+      class="modal fade"
+      id="update"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+      tabindex="-1"
+      aria-labelledby="updateLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="updateLabel">Update Details for {{entry.name}}</h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %} {{upform}}
+
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Close
+                </button>
+                <button type="submit" class="btn btn-primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- Modal -->
+    <div
+      class="modal fade"
+      id="duedate"
+      data-bs-backdrop="static"
+      data-bs-keyboard="false"
+      tabindex="-1"
+      aria-labelledby="duedateLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="duedateLabel">Change Due Date for {{entry.name}}</h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form method="post" enctype="multipart/form-data">
+              {% csrf_token %} {{dueform}}
+
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-bs-dismiss="modal"
+                >
+                  Close
+                </button>
+                <button type="submit" class="btn btn-primary">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+
+    <script>
+      var modalWrap = null;
+
+
+      function printcomp(elem) {
+          var printContents = document.getElementById(elem).innerHTML;
+     
+          document.body.innerHTML = printContents;
+     
+          window.print();
+          javascript:history.back()
+
+     }
+      
+
+
+      const showModal = (title, type) => {
+      if (modalWrap !== null) {
+        modalWrap.remove();
+      }
+
+      var principal = {{entry.principal}};
+      var rate = {{entry.interest}};
+      var duration = document.getElementById ("duration").value;
+
+      modalWrap = document.createElement('div');
+      modalWrap.innerHTML = `
+        <div
+      class="modal fade"
+      id="si"
+      data-bs-keyboard="false"
+      tabindex="-1"
+      aria-labelledby="siLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" id="comptab">
+          <div class="modal-header">
+            <h1 class="modal-title fs-5" id="siLabel">${title}</h1>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body" id="wrapcontent">
+          </div>
+        </div>
+      </div>
+    </div>
+      `;
+      document.body.append(modalWrap);
+
+      if (type == 'si') {
+
+        const si = parseInt((principal*rate*duration)/100);
+
+        wrapcontent.innerHTML = `
+
+            Principal Amount - ₹${principal}
+            <br>
+            Interest Rate - ${rate}%
+            <br>
+            <br>
+            <b>Interest - ₹${si}<b>
+            <br>
+            <br>
+            <b>Total Value - ₹${si + principal}<b>
+
+      `;
+      }
+      else {
+        wrapcontent.innerHTML = `
+            <table class="table">
+              <thead class="table-dark">
+                <tr>
+
+                  <th scope="col">Month</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Interest</th>
+                  <th scope="col">Total</th>
+
+        
+                </tr>
+              </thead>
+              <tbody id="rows">
+              </tbody>
+            </table>
+            <button type="button" onclick="printcomp('comptab')" class="btn btn-info m-2 float-end">PDF</button>
+
+      `;
+      
+      
+      for (let i = 1; i <= duration; i++) {
+          const interest = (principal * rate) / 100;
+          
+          rows.innerHTML += `
+          <tr>
+            <td>${i}</td>
+            <td>₹${Math.round(principal)}</td>
+            <td>₹${Math.round(interest)}</td>
+            <td>₹${Math.round(principal+interest)}</td>
+          </tr>
+          `
+          principal += interest;
+      }
+      }
+
+
+      var modal = new bootstrap.Modal(modalWrap.querySelector('.modal'));
+      modal.show();
+      }
+    </script>
+
+
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
